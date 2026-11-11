@@ -1,8 +1,7 @@
 """Bài tập chính: hiện chưa có lời giải. Xem GUIDE.md."""
+
 import json
 from status_tools import SCHEMAS
-
-"""Bài tập chính: hiện chưa có lời giải. Xem GUIDE.md."""
 
 SYSTEM_PROMPT = '''Bạn là trợ lý điều tra trạng thái GitHub và Cloudflare.
 Dùng tools trước khi khẳng định về trạng thái. Phân biệt incident hiện tại và lịch sử,
@@ -47,17 +46,19 @@ def run_agent(question, provider, tools, max_steps=6):
                 "finish": finish
             })
 
-            if calls:
+            if calls and finish != "length":
                 for call in calls:
                     call_id = call["id"]
                     name = call["name"]
                     arguments = call["arguments"]
 
-                    # Parse arguments
-                    args = json.loads(arguments)
-
-                    # Thực thi tool
-                    result = tools.execute(name, args)
+                    try:
+                        args = json.loads(arguments)
+                    except json.JSONDecodeError:
+                        args = None
+                        result = {"ok": False, "error": "INVALID_ARGUMENTS"}
+                    else:
+                        result = tools.execute(name, args)
 
                     trace.append({
                         "event": "tool",
@@ -107,5 +108,5 @@ def run_agent(question, provider, tools, max_steps=6):
             "answer": "",
             "trace": trace,
             "usage": usage,
-            "error": str(e)
+            "error": f"Agent run failed ({type(e).__name__})"
         }
